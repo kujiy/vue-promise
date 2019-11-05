@@ -1,8 +1,6 @@
 <template>
     <div id="app">
-        <img alt="Vue logo" src="./assets/logo.png">
-        <!--        <HelloWorld msg="Welcome to Your Vue.js App"/>-->
-        <!--        <ThisTest></ThisTest>-->
+        open console
     </div>
 </template>
 
@@ -18,63 +16,55 @@
         // }
         data: function () {
             return {
-                count: 0,
-                out: "data-out",
-                hosts: [{hostname: "a"}, {hostname: "b"}, {hostname: "c"}]
+                selectedHosts: [{hostname: "a"}, {hostname: "b"}, {hostname: "c"}],
+                form: {return_now: "yes", removed_verda: "Finished"}
             }
         },
         mounted: function () {
-            this.start();
+            this.postAnswerLoop(); // 実行
         },
         methods: {
-            start: function () {
-                this.loop();
+            async postAnswerLoop() {
+                console.log('start');
+                let num = 0;
+                for (let i = 0; i <= this.selectedHosts.length - 1; i++) {
+                    num = await this.postAnswerEachHost(this.selectedHosts[i]);
+                    console.log('postAnswerLoop(): promise result is ' + num); // ここは同期実行できてるか確認するためのものです。
+                }
+                // promiseすべて終わったら呼ばれる
+                this.finishSurvey()
             },
-            loop() {
-                this.hosts.forEach(function (item, index) {
-                    console.log(this.out);
-                    this.funcA(item);
-                }.bind(this));
+            postAnswerEachHost(item) {
+                return new Promise((resolve, reject) => {
+                    var hostname = item.hostname;
+                    setTimeout(function () {
+                        console.log("postAnswerEachHost timeout " + hostname);
+
+                        let url = `http://localhost/a.php?hostname=${hostname}`;
+                        let data = this.form;
+                        data.headers = {
+                            "Content-Type": "application/json",
+                            Accept: "application/json",
+                            'Access-Control-Allow-Origin': '*',
+                            "Access-Control-Allow-Headers" : "Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With"
+                        }
+                        data.withCredentials = false;
+
+                        this.axios.post(url, data)
+                            .then(function (response) {
+                                console.log(response);
+                                return resolve(`hostname=${hostname} status=${response.status}`);
+                            })
+                            .catch(function (error) {
+                                console.log(error);
+                            });
+                    }.bind(this), 50);
+                });
             },
-            funcA(item) {
-                let str = item.hostname;
-                console.log("funcA " + str);
-                setTimeout(function () {
-                    console.log("funcA timeout " + str);
-                    console.log(this.out);
-                    this.funcB();
-                    this.axios.get("http://localhost/a.php", {
-                        headers: {
-                        },
-                        withCredentials: false
-                    })
-                        .then(function (response) {
-                            console.log(response);
-                        })
-                        .catch(function (error) {
-                            console.log(error);
-                        });
-                }.bind(this), 500);
+            finishSurvey() {
+                console.log('\ndone----------------');
+                console.log(this.selectedHosts);
             },
-            funcB: function () {
-                console.log("funcB is replacing out...");
-                this.out = "replaced-out";
-                this.funcC();
-            },
-            funcC() {
-                console.log("funcC put out - " + this.out)
-            }
         }
     }
 </script>
-
-<style>
-    #app {
-        font-family: 'Avenir', Helvetica, Arial, sans-serif;
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
-        text-align: center;
-        color: #2c3e50;
-        margin-top: 60px;
-    }
-</style>
